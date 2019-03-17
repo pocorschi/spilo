@@ -13,5 +13,6 @@ cat > scm-source.json <<__EOT__
     "status": "$STATUS"
 }
 __EOT__
+echo "$@" 
 
 exec docker build "$@"

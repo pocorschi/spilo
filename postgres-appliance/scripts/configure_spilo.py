@@ -223,7 +223,7 @@ postgresql:
     ssl: 'on'
     ssl_cert_file: {{SSL_CERTIFICATE_FILE}}
     ssl_key_file: {{SSL_PRIVATE_KEY_FILE}}
-    shared_preload_libraries: 'bg_mon,pg_stat_statements,pg_stat_kcache,pg_cron,set_user,pgextwlist'
+    shared_preload_libraries: 'bg_mon,pg_stat_statements,pg_stat_kcache,pg_cron,set_user,pgextwlist,timescaledb'
     bg_mon.listen_address: '0.0.0.0'
     pg_stat_statements.track_utility: 'off'
     extwlist.extensions: 'btree_gin,btree_gist,citext,hstore,intarray,ltree,pgcrypto,pgq,pg_trgm,postgres_fdw,uuid-ossp,hypopg,pg_partman'
@@ -238,6 +238,9 @@ postgresql:
     - hostssl all             +{{HUMAN_ROLE}}    ::1/128            pam
     {{/PAM_OAUTH2}}
     - host    all             all                ::1/128            md5
+    - host    all             all                ::1/128            md5
+    - hostssl all             all                0.0.0.0/0          md5
+    - host    all             all                0.0.0.0/0          md5
     - hostssl replication     {{PGUSER_STANDBY}} all                md5
     - hostnossl all           all                all                reject
     {{#PAM_OAUTH2}}
@@ -358,7 +361,8 @@ def set_extended_wale_placeholders(placeholders, prefix):
 
 def set_walg_placeholders(placeholders, prefix=''):
     # TODO: add 'WAL_GS_BUCKET', 'WALE_GS_PREFIX', 'WALG_GS_PREFIX'
-    walg_supported = any(placeholders.get(prefix + n) for n in ('WAL_S3_BUCKET', 'WALE_S3_PREFIX', 'WALG_S3_PREFIX'))
+    walg_supported = any(placeholders.get(prefix + n) for n in ('WAL_S3_BUCKET', 'WALE_S3_PREFIX', 'WALG_S3_PREFIX',
+                                                                'WAL_GS_BUCKET', 'WALE_GS_PREFIX', 'WALG_GS_PREFIX'))
     default = placeholders.get('USE_WALG', False)
     placeholders.setdefault(prefix + 'USE_WALG', default)
     for name in ('USE_WALG_BACKUP', 'USE_WALG_RESTORE'):
@@ -630,7 +634,7 @@ def write_wale_environment(placeholders, prefix, overwrite):
             wale['WALE_GS_PREFIX'] = wale['WALE_GCS_PREFIX']
         elif wale.get('WAL_GCS_BUCKET'):
             wale['WAL_GS_BUCKET'] = wale['WAL_GCS_BUCKET']
-        write_envdir_names = gs_names  # TODO: + walg_names
+        write_envdir_names = gs_names + walg_names
     elif wale.get('WAL_SWIFT_BUCKET') or wale.get('WALE_SWIFT_PREFIX'):
         write_envdir_names = swift_names
     else:
